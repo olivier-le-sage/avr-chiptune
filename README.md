@@ -1,5 +1,7 @@
 # avr-chiptune
 
+![If music be the food of love, play on!](assets/sheet_music.png?raw=true "")
+
 ## Summary
 
 A brief program that plays a pre-written chiptune melody on an Atmel ATtiny10 microprocessor
@@ -7,8 +9,8 @@ that, in its SOT-23 packaging, is smaller than a grain of rice.
 The music is played with a small piezoelectric sensor (buzzer).
 Classical audiophiles may recognize Bach's Toccata and Fugue in D minor.
 
-It fits into 1024 bytes of flash and 32 bytes of SRAM, so it should work on
-virtually any AVR microprocesor with the same architecture/registers.
+It fits into 1024 bytes of flash and 32 bytes of SRAM, so it should work on any
+AVR microprocesor with the same architecture/registers.
 
 ## Schematic
 
