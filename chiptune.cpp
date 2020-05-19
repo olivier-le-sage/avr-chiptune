@@ -95,7 +95,10 @@ void ioinit(void) {
     ATOMIC_BLOCK(ATOMIC_FORCEON) {
         /* Configure pins */
         DDRB = 0b0001 /* PB0 as output */
-        xxxxxxxxxxxx  /* PB2 as input */
+        PUEB = 0b0100 /* enable pull-up on PB2 to make it an input */
+
+        /* Configure clock calibration. Trims the internal RC oscillator. */
+        OSCCAL = 118; /* WIP. See Section 18.9 */
 
         /* Configure 16-bit PWM in Fast PWM mode (section 12.9.3) */
         TCCR0A = _BV(WGM00) | _BV(WGM01) | _BV(COM0A0);
