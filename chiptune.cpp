@@ -32,27 +32,61 @@ enum { UP, DOWN };
 #define CLKDIV256  0b100 /* clk prescaler setting for clk/128 */
 #define CLKDIV1024 0b101 /* clk prescaler setting for clk/1024 */
 
-#define NUM_NOTES 16
-#define Q_NOTE 860
-#define F_NOTE 3440
+/* note/rest durations (following typical music theory) */
+#define SIXTYFOURTH  1 << 0
+#define THIRTYSECOND 1 << 1
+#define SIXTEENTH    1 << 2
+#define EIGTH        1 << 3
+#define QUARTER      1 << 4
+#define HALF         1 << 5
+#define FULL         1 << 6
 
-/* music data stored in EEPROM */
+#define NUM_NOTES 21
+#define Q_NOTE 864
+#define F_NOTE 3456
+#define SIXT_NOTE 216
+#define SIXT_FR_NOTE 54
+
+/* music data stored in EEPROM. One bar is 4 quarter notes, or one whole note.*/
 const unsigned char music[NUM_NOTES] PROGMEM = {
-    NOTE_A3, NOTE_G3, NOTE_A3,  NOTE_G3,
-    NOTE_F3, NOTE_E3, NOTE_D3,  NOTE_CS2,
-    NOTE_D3, NOTE_A2, NOTE_G2,  NOTE_A2,
-    NOTE_E2, NOTE_F2, NOTE_CS1, NOTE_D2,
+    NOTE_A3,  NOTE_G3, NOTE_A3,  REST,
+    NOTE_G3,  NOTE_F3, NOTE_E3,  NOTE_D3,
+    NOTE_CS2, REST,    NOTE_D3,  REST,
+    NOTE_A2,  NOTE_G2, NOTE_A2,  REST,
+    NOTE_E2,  NOTE_F2, NOTE_CS1, NOTE_D2,
+    REST
 }
 const unsigned char durations[NUM_NOTES] PROGMEM = {
-    0x00, 0x00, 0x00, 0x00, /* WIP*/
-    0x00, 0x00, 0x00, 0x00, /* WIP*/
-    0x00, 0x00, 0x00, 0x00, /* WIP*/
-    0x00, 0x00, 0x00, 0x00  /* WIP*/
+    THIRTYSECOND, THIRTYSECOND, THIRTYSECOND, THIRTYSECOND,
+    SIXTYFOURTH,  SIXTYFOURTH,  SIXTYFOURTH,  SIXTYFOURTH,
+    SIXTEENTH,    THIRTYSECOND, EIGTH,        EIGTH,
+    THIRTYSECOND, THIRTYSECOND, THIRTYSECOND, THIRTYSECOND,
+    THIRTYSECOND, THIRTYSECOND, THIRTYSECOND, EIGHT,
+    EIGTH
+}
+const bool fermatas[NUM_NOTES] PROGMEM = {
+    false, false, true,  false,
+    false, false, false, false,
+    false, false, false, true,
+    false, false, true,  false,
+    false, false, false, false,
+    true
 }
 
 /* an isr that will be called when Timer 0 hits compare match A */
 ISR(TIM0_COMPA) {
     /* WIP */
+}
+
+/* an isr for timer overflows */
+ISR(TIM0_OVF) {
+    /* WIP */
+}
+
+/* an isr for external interrupts. Triggered when the push-button is pressed. */
+ISR(INT0) {
+    /* WIP */
+
 }
 
 /* sets up all configuration bits on chip reset */
@@ -61,6 +95,7 @@ void ioinit(void) {
     ATOMIC_BLOCK(ATOMIC_FORCEON) {
         /* Configure pins */
         DDRB = 0b0001 /* PB0 as output */
+        xxxxxxxxxxxx  /* PB2 as input */
 
         /* Configure 16-bit PWM in Fast PWM mode (section 12.9.3) */
         TCCR0A = _BV(WGM00) | _BV(WGM01) | _BV(COM0A0);
@@ -70,28 +105,35 @@ void ioinit(void) {
 }
 
 /* Uses delays to play a certain frequency for a certain time.
- * The length of a quarter note in Adagio is 60s / 70 BPM = ~857ms
- * Duration is expressed as the division of the note, i.e. 1,2,4,8, or 16
+ * The length of a quarter note in Adagio is 60s / 70 BPM = ~~864ms
+ * The length of a bar/whole note in 4/4 Adagio is 4*864 = 3.456s
+ * Duration is expressed as a multiple of the 64th note, i.e. 1,2,4,..32,64
  */
 void play_note(unsigned char frequency, unsigned char duration) {
     ATOMIC_BLOCK(ATOMIC_FORCEON) {
         OCR0A = (short) frequency; /* cast to short for 16-bit assignemnt */
-        _delay_ms(F_NOTE/duration) /* delay to hold the frequency */
+        _delay_ms((F_NOTE/duration)*fermata) /* delay to hold the frequency */
     }
 }
 
 int main(void) {
     unsigned char i = 0;
+    unsigned char note;
+    unsigned char duration;
 
     ioinit();
 
-    /* play one note after the other, and immediately repeat. */
+    for (;;) sleep_mode(); /* sleep until button is pressed */
+
+    /* play one note after the other, and immediately repeat the melody. */
     while(1) {
+        note = pgm_read_byte(&music[i]);
+        duration = pgm_read_byte(&durations[i]);
+
+        if (pgm_read_byte(&fermatas[i])) duration = (char) duration*1.5;
         play_note(pgm_read_byte(&music[i]), pgm_read_byte(&durations[i]));
         i = ++i % NUM_NOTES;
     }
-
-    for (;;) sleep_mode();
 
     return 0;
 }

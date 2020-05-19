@@ -2,7 +2,8 @@
 
 ## Summary
 
-A brief program that plays a pre-written chiptune melody on an ATtiny10.
+A brief program that plays a pre-written chiptune melody on an Atmel ATtiny10 microprocessor
+that, in its SOT-23 packaging, is smaller than a grain of rice.
 The music is played with a small piezoelectric sensor (buzzer).
 Classical audiophiles may recognize Bach's Toccata and Fugue in D minor.
 
