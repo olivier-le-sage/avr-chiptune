@@ -1,9 +1,9 @@
 # avr-chiptune
 
-## Brief
+## Summary
 
 A brief program that plays a pre-written chiptune melody on an ATtiny10.
-The music is played with a piezoelectric sensor (buzzer).
+The music is played with a small piezoelectric sensor (buzzer).
 Classical audiophiles may recognize Bach's Toccata and Fugue in D minor.
 
 It fits into 1024 bytes of flash and 32 bytes of SRAM, so it should work on
@@ -13,7 +13,7 @@ virtually any AVR microprocesor with the same architecture/registers.
 
 ![Hardware diagram](assets/schematic.png?raw=true "")
 
-## Requirements
+## Pre-requisites
 
 This project requires the avr-libc SDK and the AVR GCC compiler. They can be
 installed on Debian systems by using the following command:
