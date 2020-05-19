@@ -1,6 +1,6 @@
 # avr-chiptune
 
-![If music be the food of love, play on!](assets/sheet_music.png?raw=true "")
+![If music be the food of love, play on!](assets/sheet_music.PNG?raw=true "")
 
 ## Summary
 
