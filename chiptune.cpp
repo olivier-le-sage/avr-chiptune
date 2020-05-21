@@ -34,7 +34,7 @@
 #define SIXTYFOURTH  1 << 0
 #define THIRTYSECOND 1 << 1
 #define SIXTEENTH    1 << 2
-#define EIGTH        1 << 3
+#define EIGHT        1 << 3
 #define QUARTER      1 << 4
 #define HALF         1 << 5
 #define FULL         1 << 6
@@ -59,10 +59,10 @@ const unsigned char music[NUM_NOTES] PROGMEM = {
 const unsigned char durations[NUM_NOTES] PROGMEM = {
     THIRTYSECOND, THIRTYSECOND, THIRTYSECOND, THIRTYSECOND,
     SIXTYFOURTH,  SIXTYFOURTH,  SIXTYFOURTH,  SIXTYFOURTH,
-    SIXTEENTH,    THIRTYSECOND, EIGTH,        EIGTH,
+    SIXTEENTH,    THIRTYSECOND, EIGHT,        EIGHT,
     THIRTYSECOND, THIRTYSECOND, THIRTYSECOND, THIRTYSECOND,
     THIRTYSECOND, THIRTYSECOND, THIRTYSECOND, EIGHT,
-    EIGTH
+    EIGHT
 };
 const bool fermatas[NUM_NOTES] PROGMEM = {
     false, false, true,  false,
@@ -74,17 +74,17 @@ const bool fermatas[NUM_NOTES] PROGMEM = {
 };
 
 /* an isr that will be called when Timer 0 hits compare match A */
-ISR(TIM0_COMPA_vector) {
+ISR(TIM0_COMPA_vect) {
     /* WIP */
 }
 
 /* an isr for timer overflows */
-ISR(TIM0_OVF_vector) {
+ISR(TIM0_OVF_vect) {
     /* WIP */
 }
 
 /* an isr for external interrupts. Triggered when the push-button is pressed. */
-ISR(INT0_vector) {
+ISR(INT0_vect) {
     /* WIP */
     sleeping = false;
 }
