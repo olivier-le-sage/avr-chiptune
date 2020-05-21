@@ -16,13 +16,13 @@
 #include <avr/sleep.h>
 #include <avr/pgmspace.h>
 #include <util/atomic.h>
-#if defined(F_CPU)
+#if !defined(F_CPU)
 #   define F_CPU 1000000UL  /* 1 MHz */
 #endif
 #include <util/delay.h>
 #include "pitches.h"
 
-#define TIMER0_TOP 1023  /* 10-bit PWM */
+// #define TIMER0_TOP 1023  /* 10-bit PWM */
 #define TIMER0_TOP 65535 /* 16-bit PWM */
 #define CLKDIV1    0b001 /* clk prescaler setting for clk/1 */
 #define CLKDIV8    0b010 /* clk prescaler setting for clk/8 */
@@ -45,7 +45,7 @@
 #define SIXT_NOTE 216
 #define SIXT_FR_NOTE 54
 
-unsigned bool sleeping = true;
+static bool sleeping = true; /* in SRAM */
 
 /* music data stored in EEPROM. One bar is 4 quarter notes, or one whole note.*/
 const unsigned char music[NUM_NOTES] PROGMEM = {
@@ -55,7 +55,7 @@ const unsigned char music[NUM_NOTES] PROGMEM = {
     NOTE_A2,  NOTE_G2, NOTE_A2,  REST,
     NOTE_E2,  NOTE_F2, NOTE_CS1, NOTE_D2,
     REST
-}
+};
 const unsigned char durations[NUM_NOTES] PROGMEM = {
     THIRTYSECOND, THIRTYSECOND, THIRTYSECOND, THIRTYSECOND,
     SIXTYFOURTH,  SIXTYFOURTH,  SIXTYFOURTH,  SIXTYFOURTH,
@@ -63,7 +63,7 @@ const unsigned char durations[NUM_NOTES] PROGMEM = {
     THIRTYSECOND, THIRTYSECOND, THIRTYSECOND, THIRTYSECOND,
     THIRTYSECOND, THIRTYSECOND, THIRTYSECOND, EIGHT,
     EIGTH
-}
+};
 const bool fermatas[NUM_NOTES] PROGMEM = {
     false, false, true,  false,
     false, false, false, false,
@@ -71,20 +71,20 @@ const bool fermatas[NUM_NOTES] PROGMEM = {
     false, false, true,  false,
     false, false, false, false,
     true
-}
+};
 
 /* an isr that will be called when Timer 0 hits compare match A */
-ISR(TIM0_COMPA) {
+ISR(TIM0_COMPA_vector) {
     /* WIP */
 }
 
 /* an isr for timer overflows */
-ISR(TIM0_OVF) {
+ISR(TIM0_OVF_vector) {
     /* WIP */
 }
 
 /* an isr for external interrupts. Triggered when the push-button is pressed. */
-ISR(INT0) {
+ISR(INT0_vector) {
     /* WIP */
     sleeping = false;
 }
@@ -94,12 +94,12 @@ void init(void) {
     /* disable interrupts to guarantee atomic 16-bit operations */
     ATOMIC_BLOCK(ATOMIC_FORCEON) {
         /* Configure I/O pins */
-        DDRB = 0b00000001 /* PB0 as output */
-        PUEB = 0b00000100 /* enable pull-up on PB2 to make it an input */
+        DDRB = 0b00000001; /* PB0 as output */
+        PUEB = 0b00000100; /* enable pull-up on PB2 to make it an input */
 
         /* Configure external interrupt */
-        EICRA = 0b00000011  /* rising edge triggered interrupt */
-        PCMSK = _BV(PCINT2) /* enable interrupts on PB2 */
+        EICRA = 0b00000011;  /* rising edge triggered interrupt */
+        PCMSK = _BV(PCINT2); /* enable interrupts on PB2 */
 
         /* Configure clock calibration. Trims the internal RC oscillator. */
         OSCCAL = 118; /* WIP. See Section 18.9 */
@@ -119,7 +119,7 @@ void init(void) {
 void play_note(unsigned char frequency, unsigned char duration) {
     ATOMIC_BLOCK(ATOMIC_FORCEON) {
         OCR0A = (short) frequency; /* cast to short for 16-bit assignemnt */
-        _delay_ms(SIXT_FR_NOTE*duration) /* delay to hold the frequency */
+        _delay_ms(SIXT_FR_NOTE*duration); /* delay to hold the frequency */
     }
 }
 
@@ -139,7 +139,7 @@ int main(void) {
             duration = pgm_read_byte(&durations[i]);
 
             if (pgm_read_byte(&fermatas[i])) duration = (char) duration*1.5;
-            play_note(pgm_read_byte(&music[i]), pgm_read_byte(&durations[i]));
+            play_note(note, duration);
             /* i = ++i % NUM_NOTES; */
         }
 
