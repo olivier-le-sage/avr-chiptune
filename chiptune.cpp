@@ -31,19 +31,28 @@
 #define CLKDIV1024 0b101 /* clk prescaler setting for clk/1024 */
 
 /* note/rest durations */
-#define SIXTYFOURTH  1 << 0
-#define THIRTYSECOND 1 << 1
-#define SIXTEENTH    1 << 2
-#define EIGHT        1 << 3
-#define QUARTER      1 << 4
-#define HALF         1 << 5
-#define FULL         1 << 6
+#define SIXTYFOURTH  1 << 0 /* 1 */
+#define THIRTYSECOND 1 << 1 /* 2 */
+#define SIXTEENTH    1 << 2 /* 4 */
+#define EIGHT        1 << 3 /* 8 */
+#define QUARTER      1 << 4 /* 16 */
+#define HALF         1 << 5 /* 32 */
+#define FULL         1 << 6 /* 64 */
+
+/* note/rest durations when a fermata is present */
+#define SIXTYFOURTH_F  0b10 << 0 /* ~1.5 */
+#define THIRTYSECOND_F 0b11 << 0 /* 3 */
+#define SIXTEENTH_F    0b11 << 1 /* 6 */
+#define EIGHT_F        0b11 << 2 /* 12 */
+#define QUARTER_F      0b11 << 3 /* 24 */
+#define HALF_F         0b11 << 4 /* 48 */
+#define FULL_F         0b11 << 5 /* 96 */
 
 #define NUM_NOTES 21 /* --> EEPROM usage is three times this number in bytes */
 #define Q_NOTE 864
 #define F_NOTE 3456
 #define SIXT_NOTE 216
-#define SIXT_FR_NOTE 54
+#define SIXT_FR_NOTE 54 /* most important */
 
 static bool sleeping = true; /* in SRAM */
 
@@ -140,7 +149,31 @@ int main(void) {
             note = pgm_read_byte(&music[i]);
             duration = pgm_read_byte(&durations[i]);
 
-            if (pgm_read_byte(&fermatas[i])) duration = (char) duration*1.5;
+            if (pgm_read_byte(&fermatas[i])) {
+                switch(duration) {
+                    case SIXTYFOURTH:
+                        duration = SIXTYFOURTH_F;
+                        break;
+                    case THIRTYSECOND:
+                        duration = THIRTYSECOND_F;
+                        break;
+                    case SIXTEENTH:
+                        duration = SIXTEENTH_F;
+                        break;
+                    case EIGHT:
+                        duration = EIGHT_F;
+                        break;
+                    case QUARTER:
+                        duration = QUARTER_F;
+                        break;
+                    case HALF:
+                        duration = HALF_F;
+                        break;
+                    case FULL:
+                        duration = FULL_F;
+                        break;
+                }
+            }
             play_note(note, duration);
             /* i = ++i % NUM_NOTES; */
         }
