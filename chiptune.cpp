@@ -119,7 +119,9 @@ void init(void) {
 void play_note(unsigned char frequency, unsigned char duration) {
     ATOMIC_BLOCK(ATOMIC_FORCEON) {
         OCR0A = (short) frequency; /* cast to short for 16-bit assignemnt */
-        _delay_ms(SIXT_FR_NOTE*duration); /* delay to hold the frequency */
+        for (int i = 0; i < duration; i++) { /* delay to hold the frequency */
+            _delay_ms(SIXT_FR_NOTE);
+        }
     }
 }
 
