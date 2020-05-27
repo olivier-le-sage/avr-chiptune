@@ -9,7 +9,7 @@ that, in its SOT-23 packaging, is smaller than a grain of rice.
 The music is played with a small piezoelectric sensor (buzzer).
 Classical audiophiles may recognize Bach's Toccata and Fugue in D minor.
 
-It fits into 1024 bytes of flash and 32 bytes of SRAM, so it should work on any
+It fits into 1024 bytes of program memory and 32 bytes of SRAM, so it should work on any
 AVR microprocesor with the same architecture/registers.
 
 ## Schematic

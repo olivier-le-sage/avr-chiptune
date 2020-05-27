@@ -1,7 +1,7 @@
 /* A brief program that plays a pre-written chiptune on an ATtiny10.
  * The music is played with a piezoelectric sensor (buzzer).
  *
- * Fits into 1024 bytes of flash and 32 bytes of SRAM, so it should work on
+ * Fits into 1024 bytes of program memory and 32 bytes of SRAM, so it should work on
  *   virtually any AVR microprocesor with the same architecture.
  *
  * References: ATtiny4/5/9/10 Datasheet and avr-libc Linux package
@@ -48,7 +48,7 @@
 #define HALF_F         0b11 << 4 /* 48 */
 #define FULL_F         0b11 << 5 /* 96 */
 
-#define NUM_NOTES 21 /* --> EEPROM usage is three times this number in bytes */
+#define NUM_NOTES 21 /* --> memory usage is three times this number in bytes */
 #define Q_NOTE 864
 #define F_NOTE 3456
 #define SIXT_NOTE 216
@@ -56,7 +56,7 @@
 
 static bool sleeping = true; /* in SRAM */
 
-/* music data stored in EEPROM. One bar is 4 quarter notes, or one whole note.*/
+/* music data stored in memory. One bar is 4 quarter notes, or one whole note.*/
 const unsigned char music[NUM_NOTES] PROGMEM = {
     NOTE_A3,  NOTE_G3, NOTE_A3,  REST,
     NOTE_G3,  NOTE_F3, NOTE_E3,  NOTE_D3,
@@ -113,7 +113,7 @@ void init(void) {
         /* Configure clock calibration. Trims the internal RC oscillator. */
         OSCCAL = 118; /* WIP. See Section 18.9 */
 
-        /* Configure 16-bit PWM in Fast PWM mode (section 12.9.3) */
+        /* Configure 16-bit PWM in Fast PWM mode (Section 12.9.3) */
         TCCR0A = _BV(WGM00) | _BV(WGM01) | _BV(COM0A0);
         TCCR0B = CLKDIV1024 | _BV(WGM02) | _BV(WGM03); /* 1MHz/1024 --> ~1KHz */
         OCR0A = 0; /* set pwm output to 0 */
@@ -175,7 +175,6 @@ int main(void) {
                 }
             }
             play_note(note, duration);
-            /* i = ++i % NUM_NOTES; */
         }
 
         sleeping = true; /* go back to sleep after playing the melody once */
