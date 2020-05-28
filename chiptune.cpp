@@ -27,7 +27,7 @@
 #define CLKDIV1    0b001 /* clk prescaler setting for clk/1 */
 #define CLKDIV8    0b010 /* clk prescaler setting for clk/8 */
 #define CLKDIV64   0b011 /* clk prescaler setting for clk/64 */
-#define CLKDIV256  0b100 /* clk prescaler setting for clk/128 */
+#define CLKDIV256  0b100 /* clk prescaler setting for clk/256 */
 #define CLKDIV1024 0b101 /* clk prescaler setting for clk/1024 */
 
 /* note/rest durations */
@@ -107,7 +107,9 @@ void init(void) {
         /* Configure clock calibration. Trims the internal RC oscillator. */
         OSCCAL = 118; /* WIP. See Section 18.9 */
 
-        /* Configure 16-bit PWM in Fast PWM mode (Section 12.9.3) */
+        /* Configure 16-bit PWM in Fast PWM mode (Section 12.9.3) w/ 50% DC */
+        /* output frequency is f = fclk / (prescale * (1 + TOP)) */
+        /* max frequency is fOC0A = fclk/2 when OCR0A is set to 0x0 */
         TCCR0A = _BV(WGM00) | _BV(WGM01) | _BV(COM0A0);
         TCCR0B = CLKDIV1024 | _BV(WGM02) | _BV(WGM03); /* 1MHz/1024 --> ~1KHz */
     }
@@ -121,14 +123,15 @@ void init(void) {
 void play_note(unsigned char frequency, unsigned char duration) {
 
     if (frequency == REST) {
-        /* stop PWM generation (silence) */
-        TCCR0A &= 0b00001111;
-        PORTB &= 0xFE;
+        /* force-stop PWM generation (silence) */
+        OCR0A = TIMER0_TOP;
+        TCCR0A &= 0b00111111;
         pwm_stopped = true;
     } else {
         ATOMIC_BLOCK(ATOMIC_FORCEON) { /* protect 16-bit assignment */
             if (pwm_stopped) TCCR0A |= _BV(COM0A0);
             OCR0A = frequency;
+            pwm_stopped = false;
         }
     }
 
