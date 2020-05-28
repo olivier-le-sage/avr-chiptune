@@ -54,7 +54,9 @@
 #define SIXT_NOTE 216
 #define SIXT_FR_NOTE 54 /* most important */
 
-static bool sleeping = true; /* in SRAM */
+/* in SRAM/registers */
+static bool sleeping = true;
+static bool pwm_stopped = false;
 
 /* music data stored in memory. One bar is 4 quarter notes, or one whole note.*/
 const unsigned char music[NUM_NOTES] PROGMEM = {
@@ -93,12 +95,13 @@ void init(void) {
     ATOMIC_BLOCK(ATOMIC_FORCEON) {
         /* Configure I/O pins */
         DDRB = 0b00000001; /* PB0 as output */
+        PORTB &= 0xFE; /* make sure PB0 is low at first */
         PUEB = 0b00000100; /* enable pull-up on PB2 to make it an input */
 
         /* Configure external interrupt INT0 */
-        EICRA = 0b00000000;  /* (low) level-triggered interrupt */
+        EICRA = 0b00000010;  /* falling edge-triggered interrupt */
         EIMSK = 0b00000001;  /* enable INT0 */
-        // PCMSK = _BV(PCINT2); /* enable interrupts on PB2 */
+        // PCMSK = _BV(PCINT2); /* unmask interrupts on PB2 */
         // PCICR = _BV(PCIE0); /* enable pin change interrupts on PB2 */
 
         /* Configure clock calibration. Trims the internal RC oscillator. */
@@ -107,7 +110,6 @@ void init(void) {
         /* Configure 16-bit PWM in Fast PWM mode (Section 12.9.3) */
         TCCR0A = _BV(WGM00) | _BV(WGM01) | _BV(COM0A0);
         TCCR0B = CLKDIV1024 | _BV(WGM02) | _BV(WGM03); /* 1MHz/1024 --> ~1KHz */
-        OCR0A = 0; /* set pwm output to 0 */
     }
 }
 
@@ -117,11 +119,21 @@ void init(void) {
  * Duration is expressed as a multiple of the 64th note, i.e. 1,2,4,..32,64
  */
 void play_note(unsigned char frequency, unsigned char duration) {
-    ATOMIC_BLOCK(ATOMIC_FORCEON) {
-        OCR0A = frequency;
-        for (int i = 0; i < duration; i++) { /* delay to hold the frequency */
-            _delay_ms(SIXT_FR_NOTE);
+
+    if (frequency == REST) {
+        /* stop PWM generation (silence) */
+        TCCR0A &= 0b00001111;
+        PORTB &= 0xFE;
+        pwm_stopped = true;
+    } else {
+        ATOMIC_BLOCK(ATOMIC_FORCEON) { /* protect 16-bit assignment */
+            if (pwm_stopped) TCCR0A |= _BV(COM0A0);
+            OCR0A = frequency;
         }
+    }
+
+    for (int i = 0; i < duration; i++) { /* delay to hold the frequency */
+        _delay_ms(SIXT_FR_NOTE);
     }
 }
 
@@ -167,7 +179,6 @@ int main(void) {
             }
             play_note(note, duration);
         }
-
         sleeping = true; /* go back to sleep after playing the melody once */
     }
 
