@@ -82,19 +82,8 @@ const bool fermatas[NUM_NOTES] PROGMEM = {
     true
 };
 
-/* an isr that will be called when Timer 0 hits compare match A */
-ISR(TIM0_COMPA_vect) {
-    /* WIP */
-}
-
-/* an isr for timer overflows */
-ISR(TIM0_OVF_vect) {
-    /* WIP */
-}
-
 /* an isr for external interrupts. Triggered when the push-button is pressed. */
 ISR(INT0_vect) {
-    /* WIP */
     sleeping = false;
 }
 
@@ -106,9 +95,11 @@ void init(void) {
         DDRB = 0b00000001; /* PB0 as output */
         PUEB = 0b00000100; /* enable pull-up on PB2 to make it an input */
 
-        /* Configure external interrupt */
-        EICRA = 0b00000011;  /* rising edge triggered interrupt */
-        PCMSK = _BV(PCINT2); /* enable interrupts on PB2 */
+        /* Configure external interrupt INT0 */
+        EICRA = 0b00000000;  /* (low) level-triggered interrupt */
+        EIMSK = 0b00000001;  /* enable INT0 */
+        // PCMSK = _BV(PCINT2); /* enable interrupts on PB2 */
+        // PCICR = _BV(PCIE0); /* enable pin change interrupts on PB2 */
 
         /* Configure clock calibration. Trims the internal RC oscillator. */
         OSCCAL = 118; /* WIP. See Section 18.9 */
@@ -127,7 +118,7 @@ void init(void) {
  */
 void play_note(unsigned char frequency, unsigned char duration) {
     ATOMIC_BLOCK(ATOMIC_FORCEON) {
-        OCR0A = (short) frequency; /* cast to short for 16-bit assignemnt */
+        OCR0A = frequency;
         for (int i = 0; i < duration; i++) { /* delay to hold the frequency */
             _delay_ms(SIXT_FR_NOTE);
         }
