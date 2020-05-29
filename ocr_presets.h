@@ -7,6 +7,7 @@
  */
 
 #define REST     0   /* empty note */
+#define MAX_FREQ 0   /* clk/2 = 500KHz */
 #define NOTE_B0  503 /* 31Hz */
 #define NOTE_C1  472 /* 33Hz */
 #define NOTE_CS1 445 /* 35Hz */

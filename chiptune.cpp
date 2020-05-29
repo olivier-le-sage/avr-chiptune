@@ -49,6 +49,7 @@
 #define FULL_F         0b11 << 5 /* 96 */
 
 #define NUM_NOTES 21 /* --> memory usage is three times this number in bytes */
+#define NUM_FERM_VECT NUM_NOTES/8+1 /* bitvectors. NUM_NOTES/8, rounded up. */
 #define Q_NOTE 864
 #define F_NOTE 3456
 #define SIXT_NOTE 216
@@ -58,6 +59,7 @@
 static bool sleeping = true;
 
 /* music data stored in memory. One bar is 4 quarter notes, or one whole note.*/
+/* dev note: consider using unions or bit vectors to save progmem space */
 const unsigned char music[NUM_NOTES] PROGMEM = {
     NOTE_A4,  NOTE_G4, NOTE_A4,  REST,
     NOTE_G4,  NOTE_F4, NOTE_E4,  NOTE_D4,
@@ -74,13 +76,10 @@ const unsigned char durations[NUM_NOTES] PROGMEM = {
     THIRTYSECOND, THIRTYSECOND, THIRTYSECOND, EIGHTH,
     EIGHTH
 };
-const bool fermatas[NUM_NOTES] PROGMEM = {
-    false, false, true,  false,
-    false, false, false, false,
-    false, false, false, true,
-    false, false, true,  false,
-    false, false, false, false,
-    true
+const unsigned char fermatas[NUM_FERM_VECT] PROGMEM = { /* each bit is a bool */
+    0b00000100, /* NB: little-endian (starts from the right side) */
+    0b01001000,
+    0b00010000
 };
 
 /* an isr for external interrupts. Triggered when the push-button is pressed. */
@@ -94,7 +93,7 @@ void init(void) {
     ATOMIC_BLOCK(ATOMIC_FORCEON) {
         /* Configure I/O pins */
         DDRB = 0b00000001; /* PB0 as output */
-        PORTB &= 0xFE; /* make sure PB0 is low at first */
+        // PORTB &= 0xFE; /* make sure PB0 is low at first */
         PUEB = 0b00000100; /* enable pull-up on PB2 to make it an input */
 
         /* Configure external interrupt INT0 */
@@ -136,9 +135,10 @@ void play_note(unsigned char frequency, unsigned char duration) {
 }
 
 int main(void) {
-    unsigned char i = 0;
+    unsigned char i;
     unsigned char note;
     unsigned char duration;
+    bool fermata;
 
     init();
 
@@ -149,8 +149,9 @@ int main(void) {
             /* play one note after the other */
             note = pgm_read_byte(&music[i]);
             duration = pgm_read_byte(&durations[i]);
+            fermata = pgm_read_byte(&fermatas[i/8%3]) & (1<<i%8);
 
-            if (pgm_read_byte(&fermatas[i])) {
+            if (fermata) {
                 switch(duration) {
                     case SIXTYFOURTH:
                         duration = SIXTYFOURTH_F;
