@@ -7,13 +7,13 @@
 int main (void) {
     OSCCAL = 118;
     DDRB = 1; // PB0 output
-    TCCR0A = _BV(WGM00) | _BV(WGM01) | _BV(COM0A0);
-    TCCR0B = _BV(CS02)  | _BV(WGM02) | _BV(WGM03);
-    OCR0A = 0; // start pwm at max
+    TCCR0A = _BV(COM0A0) | _BV(WGM01);
+    TCCR0B = _BV(CS00); // clk/1
+    OCR0A = 0; // start pwm at max frequency
 
     for (;;) {
         ATOMIC_BLOCK(ATOMIC_FORCEON) {
-            OCR0A += 10; // gradually bring the frequency down
+            OCR0A += 10; // gradually bring the frequency down (by ++ing period)
         }
         _delay_ms(10);
     }
