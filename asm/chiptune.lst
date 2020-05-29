@@ -36,8 +36,8 @@ Disassembly of section .text:
   3b:	02 02 02 08 08                                      .....
 
 00000040 <_ZL5music>:
-  40:	dc c4 dc 00 c4 af a5 93 45 00 93 00 6e 62 6e 00     ........E...nbn.
-  50:	52 57 23 49 00 00                                   RW#I..
+  40:	23 27 23 00 27 2c 2e 34 6f 00 34 00 46 4f 46 00     #'#.',.4o.4.FOF.
+  50:	5e 58 e1 69 00 00                                   ^X.i..
 
 00000056 <__ctors_end>:
   56:	11 27       	eor	r17, r17
@@ -51,7 +51,7 @@ Disassembly of section .text:
   62:	20 e0       	ldi	r18, 0x00	; 0
   64:	a0 e4       	ldi	r26, 0x40	; 64
   66:	b0 e0       	ldi	r27, 0x00	; 0
-  68:	e4 e7       	ldi	r30, 0x74	; 116
+  68:	e2 e8       	ldi	r30, 0x82	; 130
   6a:	f1 e4       	ldi	r31, 0x41	; 65
   6c:	02 c0       	rjmp	.+4      	; 0x72 <__do_copy_data+0x10>
   6e:	31 91       	ld	r19, Z+
@@ -59,8 +59,8 @@ Disassembly of section .text:
   72:	a2 34       	cpi	r26, 0x42	; 66
   74:	b2 07       	cpc	r27, r18
   76:	d9 f7       	brne	.-10     	; 0x6e <__do_copy_data+0xc>
-  78:	34 d0       	rcall	.+104    	; 0xe2 <main>
-  7a:	7a c0       	rjmp	.+244    	; 0x170 <_exit>
+  78:	3b d0       	rcall	.+118    	; 0xf0 <main>
+  7a:	81 c0       	rjmp	.+258    	; 0x17e <_exit>
 
 0000007c <__bad_interrupt>:
   7c:	c1 cf       	rjmp	.-126    	; 0x0 <__vectors>
@@ -102,33 +102,35 @@ void init(void) {
         DDRB = 0b00000001; /* PB0 as output */
   96:	41 e0       	ldi	r20, 0x01	; 1
   98:	41 b9       	out	0x01, r20	; 1
+        PORTB &= 0xFE; /* make sure PB0 is low at first */
+  9a:	10 98       	cbi	0x02, 0	; 2
         PUEB = 0b00000100; /* enable pull-up on PB2 to make it an input */
-  9a:	54 e0       	ldi	r21, 0x04	; 4
-  9c:	53 b9       	out	0x03, r21	; 3
+  9c:	54 e0       	ldi	r21, 0x04	; 4
+  9e:	53 b9       	out	0x03, r21	; 3
 
         /* Configure external interrupt INT0 */
-        EICRA = 0b00000000;  /* (low) level-triggered interrupt */
-  9e:	15 bb       	out	0x15, r17	; 21
+        EICRA = 0b00000010;  /* falling edge-triggered interrupt */
+  a0:	52 e0       	ldi	r21, 0x02	; 2
+  a2:	55 bb       	out	0x15, r21	; 21
         EIMSK = 0b00000001;  /* enable INT0 */
-  a0:	43 bb       	out	0x13, r20	; 19
-        // PCMSK = _BV(PCINT2); /* enable interrupts on PB2 */
+  a4:	43 bb       	out	0x13, r20	; 19
+        // PCMSK = _BV(PCINT2); /* unmask interrupts on PB2 */
         // PCICR = _BV(PCIE0); /* enable pin change interrupts on PB2 */
 
         /* Configure clock calibration. Trims the internal RC oscillator. */
         OSCCAL = 118; /* WIP. See Section 18.9 */
-  a2:	46 e7       	ldi	r20, 0x76	; 118
-  a4:	49 bf       	out	0x39, r20	; 57
+  a6:	46 e7       	ldi	r20, 0x76	; 118
+  a8:	49 bf       	out	0x39, r20	; 57
 
-        /* Configure 16-bit PWM in Fast PWM mode (Section 12.9.3) */
+        /* Configure 16-bit PWM in Fast PWM mode (Section 12.9.3) w/ 50% DC */
+        /* output frequency is f = fclk / (prescale * (1 + TOP)) */
+        /* max frequency is fOC0A = fclk/2 when OCR0A is set to 0x0 */
         TCCR0A = _BV(WGM00) | _BV(WGM01) | _BV(COM0A0);
-  a6:	43 e4       	ldi	r20, 0x43	; 67
-  a8:	4e bd       	out	0x2e, r20	; 46
-        TCCR0B = CLKDIV1024 | _BV(WGM02) | _BV(WGM03); /* 1MHz/1024 --> ~1KHz */
-  aa:	4d e1       	ldi	r20, 0x1D	; 29
-  ac:	4d bd       	out	0x2d, r20	; 45
-        OCR0A = 0; /* set pwm output to 0 */
-  ae:	17 bd       	out	0x27, r17	; 39
-  b0:	16 bd       	out	0x26, r17	; 38
+  aa:	43 e4       	ldi	r20, 0x43	; 67
+  ac:	4e bd       	out	0x2e, r20	; 46
+        TCCR0B = CLKDIV64 | _BV(WGM02) | _BV(WGM03); /* 1MHz/1024 --> ~1KHz */
+  ae:	4b e1       	ldi	r20, 0x1B	; 27
+  b0:	4d bd       	out	0x2d, r20	; 45
     return 1;
 }
 
@@ -140,205 +142,227 @@ static __inline__ void __iSeiParam(const uint8_t *__s)
   b4:	08 95       	ret
 
 000000b6 <_Z9play_notehh>:
+ * The length of a measure/whole note in 4/4 Adagio is 4*864 = 3.456s
+ * Duration is expressed as a multiple of the 64th note, i.e. 1,2,4,..32,64
+ */
+void play_note(unsigned char frequency, unsigned char duration) {
+
+    if (frequency == REST) {
+  b6:	81 13       	cpse	r24, r17
+  b8:	05 c0       	rjmp	.+10     	; 0xc4 <_Z9play_notehh+0xe>
+        /* force-stop PWM generation (silence) */
+        OCR0A = TIMER0_TOP; /* wip */
+  ba:	4f ef       	ldi	r20, 0xFF	; 255
+  bc:	5f ef       	ldi	r21, 0xFF	; 255
+  be:	57 bd       	out	0x27, r21	; 39
+  c0:	46 bd       	out	0x26, r20	; 38
+  c2:	05 c0       	rjmp	.+10     	; 0xce <_Z9play_notehh+0x18>
     return 1;
 }
 
 static __inline__ uint8_t __iCliRetVal(void)
 {
     cli();
-  b6:	f8 94       	cli
- * The length of a measure/whole note in 4/4 Adagio is 4*864 = 3.456s
- * Duration is expressed as a multiple of the 64th note, i.e. 1,2,4,..32,64
- */
-void play_note(unsigned char frequency, unsigned char duration) {
-    ATOMIC_BLOCK(ATOMIC_FORCEON) {
-        OCR0A = frequency;
-  b8:	90 e0       	ldi	r25, 0x00	; 0
-  ba:	97 bd       	out	0x27, r25	; 39
-  bc:	86 bd       	out	0x26, r24	; 38
-        for (int i = 0; i < duration; i++) { /* delay to hold the frequency */
-  be:	40 e0       	ldi	r20, 0x00	; 0
-  c0:	50 e0       	ldi	r21, 0x00	; 0
-  c2:	70 e0       	ldi	r23, 0x00	; 0
-  c4:	46 17       	cp	r20, r22
-  c6:	57 07       	cpc	r21, r23
-  c8:	54 f4       	brge	.+20     	; 0xde <_Z9play_notehh+0x28>
-	#else
-		//round up by default
-		__ticks_dc = (uint32_t)(ceil(fabs(__tmp)));
-	#endif
-
-	__builtin_avr_delay_cycles(__ticks_dc);
-  ca:	8b eb       	ldi	r24, 0xBB	; 187
-  cc:	94 e3       	ldi	r25, 0x34	; 52
-  ce:	81 50       	subi	r24, 0x01	; 1
-  d0:	90 40       	sbci	r25, 0x00	; 0
-  d2:	e9 f7       	brne	.-6      	; 0xce <_Z9play_notehh+0x18>
-  d4:	00 c0       	rjmp	.+0      	; 0xd6 <_Z9play_notehh+0x20>
-  d6:	00 00       	nop
-  d8:	4f 5f       	subi	r20, 0xFF	; 255
-  da:	5f 4f       	sbci	r21, 0xFF	; 255
-  dc:	f3 cf       	rjmp	.-26     	; 0xc4 <_Z9play_notehh+0xe>
+  c4:	f8 94       	cli
+    } else {
+        ATOMIC_BLOCK(ATOMIC_FORCEON) { /* protect 16-bit assignment */
+            OCR0A = frequency;
+  c6:	90 e0       	ldi	r25, 0x00	; 0
+  c8:	97 bd       	out	0x27, r25	; 39
+  ca:	86 bd       	out	0x26, r24	; 38
     return 1;
 }
 
 static __inline__ void __iSeiParam(const uint8_t *__s)
 {
     sei();
-  de:	78 94       	sei
-    __asm__ volatile ("" ::: "memory");
-  e0:	08 95       	ret
+  cc:	78 94       	sei
+/* Uses delays to play a certain frequency for a certain time.
+ * The length of a quarter note in Adagio is 60s / 70 BPM = ~~864ms
+ * The length of a measure/whole note in 4/4 Adagio is 4*864 = 3.456s
+ * Duration is expressed as a multiple of the 64th note, i.e. 1,2,4,..32,64
+ */
+void play_note(unsigned char frequency, unsigned char duration) {
+  ce:	40 e0       	ldi	r20, 0x00	; 0
+  d0:	50 e0       	ldi	r21, 0x00	; 0
+        ATOMIC_BLOCK(ATOMIC_FORCEON) { /* protect 16-bit assignment */
+            OCR0A = frequency;
+        }
+    }
 
-000000e2 <main>:
+    for (int i = 0; i < duration; i++) { /* delay to hold the frequency */
+  d2:	70 e0       	ldi	r23, 0x00	; 0
+  d4:	46 17       	cp	r20, r22
+  d6:	57 07       	cpc	r21, r23
+  d8:	54 f4       	brge	.+20     	; 0xee <_Z9play_notehh+0x38>
+	#else
+		//round up by default
+		__ticks_dc = (uint32_t)(ceil(fabs(__tmp)));
+	#endif
+
+	__builtin_avr_delay_cycles(__ticks_dc);
+  da:	8b eb       	ldi	r24, 0xBB	; 187
+  dc:	94 e3       	ldi	r25, 0x34	; 52
+  de:	81 50       	subi	r24, 0x01	; 1
+  e0:	90 40       	sbci	r25, 0x00	; 0
+  e2:	e9 f7       	brne	.-6      	; 0xde <_Z9play_notehh+0x28>
+  e4:	00 c0       	rjmp	.+0      	; 0xe6 <_Z9play_notehh+0x30>
+  e6:	00 00       	nop
+  e8:	4f 5f       	subi	r20, 0xFF	; 255
+  ea:	5f 4f       	sbci	r21, 0xFF	; 255
+  ec:	f3 cf       	rjmp	.-26     	; 0xd4 <_Z9play_notehh+0x1e>
+  ee:	08 95       	ret
+
+000000f0 <main>:
 int main(void) {
     unsigned char i = 0;
     unsigned char note;
     unsigned char duration;
 
     init();
-  e2:	d8 df       	rcall	.-80     	; 0x94 <_Z4initv>
+  f0:	d1 df       	rcall	.-94     	; 0x94 <_Z4initv>
 
     while(1) {
         while(sleeping) sleep_mode(); /* sleep until button is pressed */
-  e4:	40 a1       	lds	r20, 0x40	; 0x800040 <__data_start>
-  e6:	44 23       	and	r20, r20
-  e8:	41 f0       	breq	.+16     	; 0xfa <main+0x18>
-  ea:	4a b7       	in	r20, 0x3a	; 58
-  ec:	41 60       	ori	r20, 0x01	; 1
-  ee:	4a bf       	out	0x3a, r20	; 58
-  f0:	88 95       	sleep
-  f2:	4a b7       	in	r20, 0x3a	; 58
-  f4:	4e 7f       	andi	r20, 0xFE	; 254
-  f6:	4a bf       	out	0x3a, r20	; 58
-  f8:	f5 cf       	rjmp	.-22     	; 0xe4 <main+0x2>
-  fa:	c0 e4       	ldi	r28, 0x40	; 64
-  fc:	d0 e8       	ldi	r29, 0x80	; 128
+  f2:	40 a1       	lds	r20, 0x40	; 0x800040 <__data_start>
+  f4:	44 23       	and	r20, r20
+  f6:	41 f0       	breq	.+16     	; 0x108 <__DATA_REGION_LENGTH__+0x8>
+  f8:	4a b7       	in	r20, 0x3a	; 58
+  fa:	41 60       	ori	r20, 0x01	; 1
+  fc:	4a bf       	out	0x3a, r20	; 58
+  fe:	88 95       	sleep
+ 100:	4a b7       	in	r20, 0x3a	; 58
+ 102:	4e 7f       	andi	r20, 0xFE	; 254
+ 104:	4a bf       	out	0x3a, r20	; 58
+ 106:	f5 cf       	rjmp	.-22     	; 0xf2 <main+0x2>
+ 108:	c0 e4       	ldi	r28, 0x40	; 64
+ 10a:	d0 e8       	ldi	r29, 0x80	; 128
 
         for (i = 0; i < NUM_NOTES; i++) {
             /* play one note after the other */
             note = pgm_read_byte(&music[i]);
-  fe:	ec 2f       	mov	r30, r28
- 100:	fd 2f       	mov	r31, r29
- 102:	80 81       	ld	r24, Z
- 104:	4c 2f       	mov	r20, r28
- 106:	5d 2f       	mov	r21, r29
- 108:	40 54       	subi	r20, 0x40	; 64
- 10a:	50 44       	sbci	r21, 0x40	; 64
+ 10c:	ec 2f       	mov	r30, r28
+ 10e:	fd 2f       	mov	r31, r29
+ 110:	80 81       	ld	r24, Z
+ 112:	4c 2f       	mov	r20, r28
+ 114:	5d 2f       	mov	r21, r29
+ 116:	40 54       	subi	r20, 0x40	; 64
+ 118:	50 44       	sbci	r21, 0x40	; 64
             duration = pgm_read_byte(&durations[i]);
- 10c:	e4 2f       	mov	r30, r20
- 10e:	f5 2f       	mov	r31, r21
- 110:	e5 5d       	subi	r30, 0xD5	; 213
- 112:	ff 4b       	sbci	r31, 0xBF	; 191
- 114:	60 81       	ld	r22, Z
+ 11a:	e4 2f       	mov	r30, r20
+ 11c:	f5 2f       	mov	r31, r21
+ 11e:	e5 5d       	subi	r30, 0xD5	; 213
+ 120:	ff 4b       	sbci	r31, 0xBF	; 191
+ 122:	60 81       	ld	r22, Z
 
             if (pgm_read_byte(&fermatas[i])) {
- 116:	e4 2f       	mov	r30, r20
- 118:	f5 2f       	mov	r31, r21
- 11a:	ea 5e       	subi	r30, 0xEA	; 234
- 11c:	ff 4b       	sbci	r31, 0xBF	; 191
- 11e:	e0 81       	ld	r30, Z
- 120:	ee 23       	and	r30, r30
- 122:	e1 f0       	breq	.+56     	; 0x15c <__DATA_REGION_LENGTH__+0x5c>
+ 124:	e4 2f       	mov	r30, r20
+ 126:	f5 2f       	mov	r31, r21
+ 128:	ea 5e       	subi	r30, 0xEA	; 234
+ 12a:	ff 4b       	sbci	r31, 0xBF	; 191
+ 12c:	e0 81       	ld	r30, Z
+ 12e:	ee 23       	and	r30, r30
+ 130:	e1 f0       	breq	.+56     	; 0x16a <__DATA_REGION_LENGTH__+0x6a>
                 switch(duration) {
- 124:	68 30       	cpi	r22, 0x08	; 8
- 126:	a9 f0       	breq	.+42     	; 0x152 <__DATA_REGION_LENGTH__+0x52>
- 128:	40 f4       	brcc	.+16     	; 0x13a <__DATA_REGION_LENGTH__+0x3a>
- 12a:	62 30       	cpi	r22, 0x02	; 2
- 12c:	71 f0       	breq	.+28     	; 0x14a <__DATA_REGION_LENGTH__+0x4a>
- 12e:	64 30       	cpi	r22, 0x04	; 4
- 130:	71 f0       	breq	.+28     	; 0x14e <__DATA_REGION_LENGTH__+0x4e>
- 132:	61 30       	cpi	r22, 0x01	; 1
- 134:	99 f4       	brne	.+38     	; 0x15c <__DATA_REGION_LENGTH__+0x5c>
+ 132:	68 30       	cpi	r22, 0x08	; 8
+ 134:	a9 f0       	breq	.+42     	; 0x160 <__DATA_REGION_LENGTH__+0x60>
+ 136:	40 f4       	brcc	.+16     	; 0x148 <__DATA_REGION_LENGTH__+0x48>
+ 138:	62 30       	cpi	r22, 0x02	; 2
+ 13a:	71 f0       	breq	.+28     	; 0x158 <__DATA_REGION_LENGTH__+0x58>
+ 13c:	64 30       	cpi	r22, 0x04	; 4
+ 13e:	71 f0       	breq	.+28     	; 0x15c <__DATA_REGION_LENGTH__+0x5c>
+ 140:	61 30       	cpi	r22, 0x01	; 1
+ 142:	99 f4       	brne	.+38     	; 0x16a <__DATA_REGION_LENGTH__+0x6a>
                     case SIXTYFOURTH:
                         duration = SIXTYFOURTH_F;
- 136:	62 e0       	ldi	r22, 0x02	; 2
- 138:	11 c0       	rjmp	.+34     	; 0x15c <__DATA_REGION_LENGTH__+0x5c>
+ 144:	62 e0       	ldi	r22, 0x02	; 2
+ 146:	11 c0       	rjmp	.+34     	; 0x16a <__DATA_REGION_LENGTH__+0x6a>
             /* play one note after the other */
             note = pgm_read_byte(&music[i]);
             duration = pgm_read_byte(&durations[i]);
 
             if (pgm_read_byte(&fermatas[i])) {
                 switch(duration) {
- 13a:	60 32       	cpi	r22, 0x20	; 32
- 13c:	61 f0       	breq	.+24     	; 0x156 <__DATA_REGION_LENGTH__+0x56>
- 13e:	60 34       	cpi	r22, 0x40	; 64
- 140:	61 f0       	breq	.+24     	; 0x15a <__DATA_REGION_LENGTH__+0x5a>
- 142:	60 31       	cpi	r22, 0x10	; 16
- 144:	59 f4       	brne	.+22     	; 0x15c <__DATA_REGION_LENGTH__+0x5c>
+ 148:	60 32       	cpi	r22, 0x20	; 32
+ 14a:	61 f0       	breq	.+24     	; 0x164 <__DATA_REGION_LENGTH__+0x64>
+ 14c:	60 34       	cpi	r22, 0x40	; 64
+ 14e:	61 f0       	breq	.+24     	; 0x168 <__DATA_REGION_LENGTH__+0x68>
+ 150:	60 31       	cpi	r22, 0x10	; 16
+ 152:	59 f4       	brne	.+22     	; 0x16a <__DATA_REGION_LENGTH__+0x6a>
                         break;
-                    case EIGHT:
-                        duration = EIGHT_F;
+                    case EIGHTH:
+                        duration = EIGHTH_F;
                         break;
                     case QUARTER:
                         duration = QUARTER_F;
- 146:	68 e1       	ldi	r22, 0x18	; 24
+ 154:	68 e1       	ldi	r22, 0x18	; 24
                         break;
- 148:	09 c0       	rjmp	.+18     	; 0x15c <__DATA_REGION_LENGTH__+0x5c>
+ 156:	09 c0       	rjmp	.+18     	; 0x16a <__DATA_REGION_LENGTH__+0x6a>
                 switch(duration) {
                     case SIXTYFOURTH:
                         duration = SIXTYFOURTH_F;
                         break;
                     case THIRTYSECOND:
                         duration = THIRTYSECOND_F;
- 14a:	63 e0       	ldi	r22, 0x03	; 3
+ 158:	63 e0       	ldi	r22, 0x03	; 3
                         break;
- 14c:	07 c0       	rjmp	.+14     	; 0x15c <__DATA_REGION_LENGTH__+0x5c>
+ 15a:	07 c0       	rjmp	.+14     	; 0x16a <__DATA_REGION_LENGTH__+0x6a>
                     case SIXTEENTH:
                         duration = SIXTEENTH_F;
- 14e:	66 e0       	ldi	r22, 0x06	; 6
+ 15c:	66 e0       	ldi	r22, 0x06	; 6
                         break;
- 150:	05 c0       	rjmp	.+10     	; 0x15c <__DATA_REGION_LENGTH__+0x5c>
-                    case EIGHT:
-                        duration = EIGHT_F;
- 152:	6c e0       	ldi	r22, 0x0C	; 12
+ 15e:	05 c0       	rjmp	.+10     	; 0x16a <__DATA_REGION_LENGTH__+0x6a>
+                    case EIGHTH:
+                        duration = EIGHTH_F;
+ 160:	6c e0       	ldi	r22, 0x0C	; 12
                         break;
- 154:	03 c0       	rjmp	.+6      	; 0x15c <__DATA_REGION_LENGTH__+0x5c>
+ 162:	03 c0       	rjmp	.+6      	; 0x16a <__DATA_REGION_LENGTH__+0x6a>
                     case QUARTER:
                         duration = QUARTER_F;
                         break;
                     case HALF:
                         duration = HALF_F;
- 156:	60 e3       	ldi	r22, 0x30	; 48
+ 164:	60 e3       	ldi	r22, 0x30	; 48
                         break;
- 158:	01 c0       	rjmp	.+2      	; 0x15c <__DATA_REGION_LENGTH__+0x5c>
+ 166:	01 c0       	rjmp	.+2      	; 0x16a <__DATA_REGION_LENGTH__+0x6a>
                     case FULL:
                         duration = FULL_F;
- 15a:	60 e6       	ldi	r22, 0x60	; 96
+ 168:	60 e6       	ldi	r22, 0x60	; 96
                         break;
                 }
             }
             play_note(note, duration);
- 15c:	ac df       	rcall	.-168    	; 0xb6 <_Z9play_notehh>
- 15e:	cf 5f       	subi	r28, 0xFF	; 255
- 160:	df 4f       	sbci	r29, 0xFF	; 255
+ 16a:	a5 df       	rcall	.-182    	; 0xb6 <_Z9play_notehh>
+ 16c:	cf 5f       	subi	r28, 0xFF	; 255
+ 16e:	df 4f       	sbci	r29, 0xFF	; 255
     init();
 
     while(1) {
         while(sleeping) sleep_mode(); /* sleep until button is pressed */
 
         for (i = 0; i < NUM_NOTES; i++) {
- 162:	f0 e8       	ldi	r31, 0x80	; 128
- 164:	c5 35       	cpi	r28, 0x55	; 85
- 166:	df 07       	cpc	r29, r31
- 168:	51 f6       	brne	.-108    	; 0xfe <main+0x1c>
+ 170:	f0 e8       	ldi	r31, 0x80	; 128
+ 172:	c5 35       	cpi	r28, 0x55	; 85
+ 174:	df 07       	cpc	r29, r31
+ 176:	51 f6       	brne	.-108    	; 0x10c <__DATA_REGION_LENGTH__+0xc>
+                        break;
                 }
             }
             play_note(note, duration);
         }
-
         sleeping = true; /* go back to sleep after playing the melody once */
- 16a:	41 e0       	ldi	r20, 0x01	; 1
- 16c:	40 a9       	sts	0x40, r20	; 0x800040 <__data_start>
+ 178:	41 e0       	ldi	r20, 0x01	; 1
+ 17a:	40 a9       	sts	0x40, r20	; 0x800040 <__data_start>
     unsigned char note;
     unsigned char duration;
 
     init();
 
     while(1) {
- 16e:	ba cf       	rjmp	.-140    	; 0xe4 <main+0x2>
+ 17c:	ba cf       	rjmp	.-140    	; 0xf2 <main+0x2>
 
-00000170 <_exit>:
- 170:	f8 94       	cli
+0000017e <_exit>:
+ 17e:	f8 94       	cli
 
-00000172 <__stop_program>:
- 172:	ff cf       	rjmp	.-2      	; 0x172 <__stop_program>
+00000180 <__stop_program>:
+ 180:	ff cf       	rjmp	.-2      	; 0x180 <__stop_program>

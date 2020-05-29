@@ -1,0 +1,99 @@
+
+frequency_cycle.elf:     file format elf32-avr
+
+
+Disassembly of section .text:
+
+00000000 <__vectors>:
+   0:	0a c0       	rjmp	.+20     	; 0x16 <__ctors_end>
+   2:	11 c0       	rjmp	.+34     	; 0x26 <__bad_interrupt>
+   4:	10 c0       	rjmp	.+32     	; 0x26 <__bad_interrupt>
+   6:	0f c0       	rjmp	.+30     	; 0x26 <__bad_interrupt>
+   8:	0e c0       	rjmp	.+28     	; 0x26 <__bad_interrupt>
+   a:	0d c0       	rjmp	.+26     	; 0x26 <__bad_interrupt>
+   c:	0c c0       	rjmp	.+24     	; 0x26 <__bad_interrupt>
+   e:	0b c0       	rjmp	.+22     	; 0x26 <__bad_interrupt>
+  10:	0a c0       	rjmp	.+20     	; 0x26 <__bad_interrupt>
+  12:	09 c0       	rjmp	.+18     	; 0x26 <__bad_interrupt>
+  14:	08 c0       	rjmp	.+16     	; 0x26 <__bad_interrupt>
+
+00000016 <__ctors_end>:
+  16:	11 27       	eor	r17, r17
+  18:	1f bf       	out	0x3f, r17	; 63
+  1a:	cf e5       	ldi	r28, 0x5F	; 95
+  1c:	d0 e0       	ldi	r29, 0x00	; 0
+  1e:	de bf       	out	0x3e, r29	; 62
+  20:	cd bf       	out	0x3d, r28	; 61
+  22:	02 d0       	rcall	.+4      	; 0x28 <main>
+  24:	1d c0       	rjmp	.+58     	; 0x60 <_exit>
+
+00000026 <__bad_interrupt>:
+  26:	ec cf       	rjmp	.-40     	; 0x0 <__vectors>
+
+00000028 <main>:
+#define CLKDIV64   0b011 /* clk prescaler setting for clk/64 */
+#define CLKDIV256  0b100 /* clk prescaler setting for clk/256 */
+#define CLKDIV1024 0b101 /* clk prescaler setting for clk/1024 */
+
+int main (void) {
+    OSCCAL = 118;
+  28:	46 e7       	ldi	r20, 0x76	; 118
+  2a:	49 bf       	out	0x39, r20	; 57
+    DDRB = 1; // PB0 output
+  2c:	41 e0       	ldi	r20, 0x01	; 1
+  2e:	41 b9       	out	0x01, r20	; 1
+    TCCR0A = _BV(WGM00) | _BV(WGM01) | _BV(COM0A0);
+  30:	43 e4       	ldi	r20, 0x43	; 67
+  32:	4e bd       	out	0x2e, r20	; 46
+    TCCR0B = CLKDIV64 | _BV(WGM02) | _BV(WGM03);
+  34:	4b e1       	ldi	r20, 0x1B	; 27
+  36:	4d bd       	out	0x2d, r20	; 45
+    OCR0A = 0; // start pwm at max frequency
+  38:	17 bd       	out	0x27, r17	; 39
+  3a:	16 bd       	out	0x26, r17	; 38
+    return 1;
+}
+
+static __inline__ uint8_t __iCliRetVal(void)
+{
+    cli();
+  3c:	f8 94       	cli
+
+    for (;;) {
+        ATOMIC_BLOCK(ATOMIC_FORCEON) {
+            OCR0A += 10; // gradually bring the frequency down (by ++ing period)
+  3e:	46 b5       	in	r20, 0x26	; 38
+  40:	57 b5       	in	r21, 0x27	; 39
+  42:	46 5f       	subi	r20, 0xF6	; 246
+  44:	5f 4f       	sbci	r21, 0xFF	; 255
+  46:	57 bd       	out	0x27, r21	; 39
+  48:	46 bd       	out	0x26, r20	; 38
+    return 1;
+}
+
+static __inline__ void __iSeiParam(const uint8_t *__s)
+{
+    sei();
+  4a:	78 94       	sei
+	#else
+		//round up by default
+		__ticks_dc = (uint32_t)(ceil(fabs(__tmp)));
+	#endif
+
+	__builtin_avr_delay_cycles(__ticks_dc);
+  4c:	4f e9       	ldi	r20, 0x9F	; 159
+  4e:	56 e8       	ldi	r21, 0x86	; 134
+  50:	61 e0       	ldi	r22, 0x01	; 1
+  52:	41 50       	subi	r20, 0x01	; 1
+  54:	50 40       	sbci	r21, 0x00	; 0
+  56:	60 40       	sbci	r22, 0x00	; 0
+  58:	e1 f7       	brne	.-8      	; 0x52 <__SREG__+0x13>
+  5a:	00 c0       	rjmp	.+0      	; 0x5c <__SREG__+0x1d>
+  5c:	00 00       	nop
+  5e:	ee cf       	rjmp	.-36     	; 0x3c <__CCP__>
+
+00000060 <_exit>:
+  60:	f8 94       	cli
+
+00000062 <__stop_program>:
+  62:	ff cf       	rjmp	.-2      	; 0x62 <__stop_program>
