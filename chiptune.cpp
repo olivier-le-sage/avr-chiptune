@@ -59,11 +59,11 @@ static bool sleeping = true;
 
 /* music data stored in memory. One bar is 4 quarter notes, or one whole note.*/
 const unsigned char music[NUM_NOTES] PROGMEM = {
+    NOTE_A4,  NOTE_G4, NOTE_A4,  REST,
+    NOTE_G4,  NOTE_F4, NOTE_E4,  NOTE_D4,
+    NOTE_CS3, REST,    NOTE_D4,  REST,
     NOTE_A3,  NOTE_G3, NOTE_A3,  REST,
-    NOTE_G3,  NOTE_F3, NOTE_E3,  NOTE_D3,
-    NOTE_CS2, REST,    NOTE_D3,  REST,
-    NOTE_A2,  NOTE_G2, NOTE_A2,  REST,
-    NOTE_E2,  NOTE_F2, NOTE_CS1, NOTE_D2,
+    NOTE_E3,  NOTE_F3, NOTE_CS2, NOTE_D3,
     REST
 };
 const unsigned char durations[NUM_NOTES] PROGMEM = {
