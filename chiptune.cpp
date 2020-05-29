@@ -20,7 +20,7 @@
 #   define F_CPU 1000000UL  /* 1 MHz */
 #endif
 #include <util/delay.h>
-#include "pitches.h"
+#include "ocr_presets.h"
 
 // #define TIMER0_TOP 1023  /* 10-bit PWM */
 #define TIMER0_TOP 65535 /* 16-bit PWM */
@@ -34,7 +34,7 @@
 #define SIXTYFOURTH  1 << 0 /* 1 */
 #define THIRTYSECOND 1 << 1 /* 2 */
 #define SIXTEENTH    1 << 2 /* 4 */
-#define EIGHT        1 << 3 /* 8 */
+#define EIGHTH       1 << 3 /* 8 */
 #define QUARTER      1 << 4 /* 16 */
 #define HALF         1 << 5 /* 32 */
 #define FULL         1 << 6 /* 64 */
@@ -43,7 +43,7 @@
 #define SIXTYFOURTH_F  0b10 << 0 /* ~1.5 */
 #define THIRTYSECOND_F 0b11 << 0 /* 3 */
 #define SIXTEENTH_F    0b11 << 1 /* 6 */
-#define EIGHT_F        0b11 << 2 /* 12 */
+#define EIGHTH_F       0b11 << 2 /* 12 */
 #define QUARTER_F      0b11 << 3 /* 24 */
 #define HALF_F         0b11 << 4 /* 48 */
 #define FULL_F         0b11 << 5 /* 96 */
@@ -56,7 +56,6 @@
 
 /* in SRAM/registers */
 static bool sleeping = true;
-static bool pwm_stopped = false;
 
 /* music data stored in memory. One bar is 4 quarter notes, or one whole note.*/
 const unsigned char music[NUM_NOTES] PROGMEM = {
@@ -70,10 +69,10 @@ const unsigned char music[NUM_NOTES] PROGMEM = {
 const unsigned char durations[NUM_NOTES] PROGMEM = {
     THIRTYSECOND, THIRTYSECOND, THIRTYSECOND, THIRTYSECOND,
     SIXTYFOURTH,  SIXTYFOURTH,  SIXTYFOURTH,  SIXTYFOURTH,
-    SIXTEENTH,    THIRTYSECOND, EIGHT,        EIGHT,
+    SIXTEENTH,    THIRTYSECOND, EIGHTH,        EIGHTH,
     THIRTYSECOND, THIRTYSECOND, THIRTYSECOND, THIRTYSECOND,
-    THIRTYSECOND, THIRTYSECOND, THIRTYSECOND, EIGHT,
-    EIGHT
+    THIRTYSECOND, THIRTYSECOND, THIRTYSECOND, EIGHTH,
+    EIGHTH
 };
 const bool fermatas[NUM_NOTES] PROGMEM = {
     false, false, true,  false,
@@ -111,7 +110,7 @@ void init(void) {
         /* output frequency is f = fclk / (prescale * (1 + TOP)) */
         /* max frequency is fOC0A = fclk/2 when OCR0A is set to 0x0 */
         TCCR0A = _BV(WGM00) | _BV(WGM01) | _BV(COM0A0);
-        TCCR0B = CLKDIV1024 | _BV(WGM02) | _BV(WGM03); /* 1MHz/1024 --> ~1KHz */
+        TCCR0B = CLKDIV64 | _BV(WGM02) | _BV(WGM03); /* 1MHz/1024 --> ~1KHz */
     }
 }
 
@@ -124,14 +123,10 @@ void play_note(unsigned char frequency, unsigned char duration) {
 
     if (frequency == REST) {
         /* force-stop PWM generation (silence) */
-        OCR0A = TIMER0_TOP;
-        TCCR0A &= 0b00111111;
-        pwm_stopped = true;
+        OCR0A = TIMER0_TOP; /* wip */
     } else {
         ATOMIC_BLOCK(ATOMIC_FORCEON) { /* protect 16-bit assignment */
-            if (pwm_stopped) TCCR0A |= _BV(COM0A0);
             OCR0A = frequency;
-            pwm_stopped = false;
         }
     }
 
@@ -166,8 +161,8 @@ int main(void) {
                     case SIXTEENTH:
                         duration = SIXTEENTH_F;
                         break;
-                    case EIGHT:
-                        duration = EIGHT_F;
+                    case EIGHTH:
+                        duration = EIGHTH_F;
                         break;
                     case QUARTER:
                         duration = QUARTER_F;
