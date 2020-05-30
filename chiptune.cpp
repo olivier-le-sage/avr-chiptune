@@ -109,7 +109,8 @@ void init(void) {
         /* output frequency is f = fclk / (prescale * (1 + TOP)) */
         /* max frequency is fOC0A = fclk/2 when OCR0A is set to 0x0 */
         TCCR0A = _BV(WGM00) | _BV(WGM01) | _BV(COM0A0);
-        TCCR0B = CLKDIV64 | _BV(WGM02) | _BV(WGM03); /* 1MHz/1024 --> ~1KHz */
+        TCCR0B = CLKDIV64 | _BV(WGM02) | _BV(WGM03);
+        OCR0A = MAX_FREQ;
     }
 }
 
@@ -122,7 +123,7 @@ void play_note(unsigned char frequency, unsigned char duration) {
 
     if (frequency == REST) {
         /* force-stop PWM generation (silence) */
-        OCR0A = TIMER0_TOP; /* wip */
+        OCR0A = MAX_FREQ;
     } else {
         ATOMIC_BLOCK(ATOMIC_FORCEON) { /* protect 16-bit assignment */
             OCR0A = frequency;
